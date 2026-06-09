@@ -1,25 +1,17 @@
-package com.microservices.bookservice.command.data;
+package com.microservices.bookservice.command.event;
 
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Entity
-@Table(name = "books")
+@AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-public class Book {
-    @Id
+public class BookCreatedEvent {
     private String id;
     private String name;
     private String author;
     private Boolean isReady;
-    @Version
-    private Long version;
-
-
 }

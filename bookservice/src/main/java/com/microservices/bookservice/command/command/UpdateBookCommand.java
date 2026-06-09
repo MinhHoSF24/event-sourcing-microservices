@@ -1,25 +1,20 @@
-package com.microservices.bookservice.command.data;
+package com.microservices.bookservice.command.command;
 
-import jakarta.persistence.*;
+import org.axonframework.modelling.command.TargetAggregateIdentifier;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Entity
-@Table(name = "books")
 @Getter
 @Setter
-@NoArgsConstructor
 @AllArgsConstructor
-public class Book {
-    @Id
+@NoArgsConstructor
+public class UpdateBookCommand {
+    @TargetAggregateIdentifier
     private String id;
     private String name;
     private String author;
     private Boolean isReady;
-    @Version
-    private Long version;
-
-
 }
