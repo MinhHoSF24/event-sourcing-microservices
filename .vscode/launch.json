@@ -8,7 +8,8 @@
             "mainClass": "com.microservices.bookservice.BookserviceApplication",
             "projectName": "bookservice",
             "args": "",
-            "envFile": "${workspaceFolder}/.env"
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": " -Dcom.sun.management.jmxremote"
         },
         {
             "type": "java",
@@ -17,6 +18,28 @@
             "cwd": "${workspaceFolder}",
             "mainClass": "com.microservices.discorverserver.DiscorverserverApplication",
             "projectName": "discorverserver",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": " -Dcom.sun.management.jmxremote"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-CommonserviceApplication<commonservice>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.microservices.commonservice.CommonserviceApplication",
+            "projectName": "commonservice",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": " -Dcom.sun.management.jmxremote"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-EmployeeserviceApplication<employeeservice>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.microservices.employeeservice.EmployeeserviceApplication",
+            "projectName": "employeeservice",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
         }

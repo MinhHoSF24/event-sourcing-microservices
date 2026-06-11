@@ -5,7 +5,6 @@ import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
 import org.axonframework.modelling.command.AggregateLifecycle;
 import org.axonframework.spring.stereotype.Aggregate;
-import org.springframework.beans.BeanUtils;
 
 import com.microservices.bookservice.command.command.CreateBookCommand;
 import com.microservices.bookservice.command.command.DeleteBookCommand;
@@ -13,12 +12,16 @@ import com.microservices.bookservice.command.command.UpdateBookCommand;
 import com.microservices.bookservice.command.event.BookCreatedEvent;
 import com.microservices.bookservice.command.event.BookDeletedEvent;
 import com.microservices.bookservice.command.event.BookUpdatedEvent;
+import com.microservices.bookservice.mapper.BookMapper;
+import org.mapstruct.factory.Mappers;
 
 import lombok.NoArgsConstructor;
 
 @Aggregate
 @NoArgsConstructor
 public class BookAggregate {
+    private static final BookMapper bookMapper = Mappers.getMapper(BookMapper.class);
+
     @AggregateIdentifier
     private String id;
     private String name;
@@ -27,18 +30,12 @@ public class BookAggregate {
 
     @CommandHandler
     public BookAggregate(CreateBookCommand command) {
-        BookCreatedEvent bookCreatedEvent = new BookCreatedEvent();
-        BeanUtils.copyProperties(command, bookCreatedEvent);
-
-        AggregateLifecycle.apply(bookCreatedEvent);
+        AggregateLifecycle.apply(bookMapper.toBookCreatedEvent(command));
     }
 
     @CommandHandler
     public void handle(UpdateBookCommand command) {
-        BookUpdatedEvent bookUpdatedEvent = new BookUpdatedEvent();
-        BeanUtils.copyProperties(command, bookUpdatedEvent);
-
-        AggregateLifecycle.apply(bookUpdatedEvent);
+        AggregateLifecycle.apply(bookMapper.toBookUpdatedEvent(command));
     }
 
     @CommandHandler

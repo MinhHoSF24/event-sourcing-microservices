@@ -7,12 +7,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.service.annotation.DeleteExchange;
 
 import com.microservices.bookservice.command.command.CreateBookCommand;
 import com.microservices.bookservice.command.command.DeleteBookCommand;
 import com.microservices.bookservice.command.command.UpdateBookCommand;
 import com.microservices.bookservice.command.model.BookRequestModel;
+
+import jakarta.validation.Valid;
+
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,7 +30,7 @@ public class BookCommandController {
     }
 
     @PostMapping
-    public String addBook(@RequestBody BookRequestModel model) {
+    public String addBook(@Valid @RequestBody BookRequestModel model) {
         CreateBookCommand command = new CreateBookCommand(
                 UUID.randomUUID().toString(),
                 model.getName(),
