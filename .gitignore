@@ -1,0 +1,3 @@
+employeeservice/src/main/resources/application.properties
+bookservice/src/main/resources/application.properties
+commonservice/src/main/resources/application.properties
