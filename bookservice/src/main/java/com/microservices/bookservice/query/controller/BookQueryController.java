@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.microservices.bookservice.query.model.BookResponseModel;
 import com.microservices.bookservice.query.queries.GetAllBookQuery;
-import com.microservices.bookservice.query.queries.GetBookDetailQuery;
-
+import com.microservices.commonservice.model.BookResponseCommonModel;
+import com.microservices.commonservice.queries.GetBookDetailQuery;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
@@ -30,8 +30,8 @@ public class BookQueryController {
     }
 
     @GetMapping("/{bookId}")
-    public BookResponseModel getBookDetail(@PathVariable String bookId) {
+    public BookResponseCommonModel getBookDetail(@PathVariable String bookId) {
         GetBookDetailQuery query = new GetBookDetailQuery(bookId);
-        return queryGateway.query(query, ResponseTypes.instanceOf(BookResponseModel.class)).join();
+        return queryGateway.query(query, ResponseTypes.instanceOf(BookResponseCommonModel.class)).join();
     }
 }

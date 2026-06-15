@@ -1,12 +1,12 @@
-package com.microservices.bookservice.query.queries;
+package com.microservices.commonservice.queries;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class GetBookDetailQuery {
+public class GetDetailEmployeeQuery {
     private String id;
 }

@@ -5,10 +5,9 @@ import com.microservices.employeeservice.command.command.DeleteEmployeeCommand;
 import com.microservices.employeeservice.command.command.UpdateEmployeeCommand;
 import com.microservices.employeeservice.command.model.CreateEmployeeModel;
 import com.microservices.employeeservice.command.model.UpdateEmployeeModel;
-// import io.swagger.v3.oas.annotations.Hidden;
+import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.Valid;
 import org.axonframework.commandhandling.gateway.CommandGateway;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -17,8 +16,11 @@ import java.util.UUID;
 @RequestMapping("/api/v1/employees")
 public class EmployeeCommandController {
 
-    @Autowired
-    private CommandGateway commandGateway;
+    private final CommandGateway commandGateway;
+
+    public EmployeeCommandController(CommandGateway commandGateway){
+        this.commandGateway = commandGateway;
+    }
 
     @PostMapping
     public String addEmployee(@Valid @RequestBody CreateEmployeeModel model){

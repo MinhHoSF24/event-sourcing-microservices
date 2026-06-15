@@ -9,6 +9,7 @@ import com.microservices.bookservice.command.data.Book;
 import com.microservices.bookservice.command.event.BookCreatedEvent;
 import com.microservices.bookservice.command.event.BookUpdatedEvent;
 import com.microservices.bookservice.query.model.BookResponseModel;
+import com.microservices.commonservice.model.BookResponseCommonModel;
 
 @Mapper(componentModel = "spring")
 public interface BookMapper {
@@ -21,4 +22,6 @@ public interface BookMapper {
     void updateBookFromEvent(BookUpdatedEvent event, @MappingTarget Book book);
 
     BookResponseModel toBookResponseModel(Book book);
+    
+    BookResponseCommonModel toBookResponseCommonModel(Book book);
 }

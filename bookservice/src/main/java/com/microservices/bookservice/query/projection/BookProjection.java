@@ -11,7 +11,8 @@ import com.microservices.bookservice.command.data.BookRepository;
 import com.microservices.bookservice.mapper.BookMapper;
 import com.microservices.bookservice.query.model.BookResponseModel;
 import com.microservices.bookservice.query.queries.GetAllBookQuery;
-import com.microservices.bookservice.query.queries.GetBookDetailQuery;
+import com.microservices.commonservice.model.BookResponseCommonModel;
+import com.microservices.commonservice.queries.GetBookDetailQuery;
 
 @Component
 public class BookProjection {
@@ -30,9 +31,9 @@ public class BookProjection {
     }
 
     @QueryHandler
-    public BookResponseModel handle(GetBookDetailQuery query) throws Exception {
+    public BookResponseCommonModel handle(GetBookDetailQuery query) throws Exception {
 
         Book book = bookRepository.findById(query.getId()).orElseThrow(() -> new Exception("Book not found with BookId: "+ query.getId()));
-        return bookMapper.toBookResponseModel(book);
+        return bookMapper.toBookResponseCommonModel(book);
     }
 }

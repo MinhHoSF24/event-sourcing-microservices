@@ -3,6 +3,7 @@ package com.microservices.employeeservice.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 
+import com.microservices.commonservice.model.EmployeeResponseCommonModel;
 import com.microservices.employeeservice.command.command.CreateEmployeeCommand;
 import com.microservices.employeeservice.command.command.UpdateEmployeeCommand;
 import com.microservices.employeeservice.command.data.Employee;
@@ -21,4 +22,5 @@ public interface EmployeeMapper {
     void updateEmployeeFromEvent(EmployeeUpdatedEvent event, @MappingTarget Employee employee);
 
     EmployeeResponseModel toEmployeeResponseModel(Employee employee);
+    EmployeeResponseCommonModel toEmployeeResponseCommonModel(Employee employee);
 }
