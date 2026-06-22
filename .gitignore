@@ -1,3 +1,18 @@
-employeeservice/src/main/resources/application.properties
-bookservice/src/main/resources/application.properties
-commonservice/src/main/resources/application.properties
+# Build output
+target/
+build/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Logs
+*.log
+logs/
+
+# Ignore per-service application config (contains env/secrets)
+**/src/main/resources/application.yml
+**/src/main/resources/application.yaml
+**/src/main/resources/application.properties

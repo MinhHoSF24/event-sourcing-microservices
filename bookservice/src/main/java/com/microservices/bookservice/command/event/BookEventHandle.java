@@ -8,6 +8,8 @@ import org.springframework.stereotype.Component;
 import com.microservices.bookservice.command.data.Book;
 import com.microservices.bookservice.command.data.BookRepository;
 import com.microservices.bookservice.mapper.BookMapper;
+import com.microservices.commonservice.event.BookRollbackStatusEvent;
+import com.microservices.commonservice.event.BookUpdateStatusEvent;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -35,6 +37,14 @@ public class BookEventHandle {
         bookRepository.save(book);
     }
 
+     @EventHandler
+    public void on(BookUpdateStatusEvent event){
+        Optional<Book> oldBook = bookRepository.findById(event.getBookId());
+        Book book = oldBook.orElseThrow(() -> new RuntimeException("Book not found"));
+        bookMapper.updateStatusBookFromEvent(event, book);
+        bookRepository.save(book);
+    }
+
     @EventHandler
     public void on(BookDeletedEvent event) throws Exception {
         try {
@@ -43,5 +53,13 @@ public class BookEventHandle {
         }catch (Exception ex){
             log.error(ex.getMessage());
         }
+    }
+
+    @EventHandler
+    public void on(BookRollbackStatusEvent event){
+        Optional<Book> oldBook = bookRepository.findById(event.getBookId());
+        Book book = oldBook.orElseThrow(() -> new RuntimeException("Book not found"));
+        bookMapper.rollBackStatusBookFromEvent(event, book);
+        bookRepository.save(book);
     }
 }

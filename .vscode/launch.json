@@ -51,7 +51,8 @@
             "mainClass": "com.microservices.apigateway.ApigatewayApplication",
             "projectName": "apigateway",
             "args": "",
-            "envFile": "${workspaceFolder}/.env"
+            "envFile": "${workspaceFolder}/.env",
+            "vmArgs": " -Dcom.sun.management.jmxremote"
         },
         {
             "type": "java",
@@ -100,6 +101,16 @@
             "cwd": "${workspaceFolder}",
             "mainClass": "com.microservices.employeeservice.EmployeeserviceApplication",
             "projectName": "com.microservices-employeeservice",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-BorrowingserviceApplication<borrowingservice>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.microservices.borrowingservice.BorrowingserviceApplication",
+            "projectName": "borrowingservice",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
         }

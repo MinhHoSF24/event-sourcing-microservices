@@ -1,6 +1,7 @@
 package com.microservices.bookservice.command.aggregate;
 
 import org.axonframework.commandhandling.CommandHandler;
+import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
 import org.axonframework.modelling.command.AggregateLifecycle;
@@ -9,11 +10,18 @@ import org.axonframework.spring.stereotype.Aggregate;
 import com.microservices.bookservice.command.command.CreateBookCommand;
 import com.microservices.bookservice.command.command.DeleteBookCommand;
 import com.microservices.bookservice.command.command.UpdateBookCommand;
+import com.microservices.bookservice.command.data.Book;
 import com.microservices.bookservice.command.event.BookCreatedEvent;
 import com.microservices.bookservice.command.event.BookDeletedEvent;
 import com.microservices.bookservice.command.event.BookUpdatedEvent;
 import com.microservices.bookservice.mapper.BookMapper;
+import com.microservices.commonservice.command.RollbackStatusBookCommand;
+import com.microservices.commonservice.command.UpdateStatusBookCommand;
+import com.microservices.commonservice.event.BookRollbackStatusEvent;
+import com.microservices.commonservice.event.BookUpdateStatusEvent;
+
 import org.mapstruct.factory.Mappers;
+import org.springframework.beans.BeanUtils;
 
 import lombok.NoArgsConstructor;
 
@@ -45,6 +53,28 @@ public class BookAggregate {
         AggregateLifecycle.apply(bookDeletedEvent);
     }
 
+    @CommandHandler
+    public void handler(UpdateStatusBookCommand command){
+        AggregateLifecycle.apply(bookMapper.toBookUpdateStatusEvent(command));
+    }
+
+    @CommandHandler
+    public void handler(RollbackStatusBookCommand command){
+        AggregateLifecycle.apply(bookMapper.toBookRollbackStatusEvent(command));
+    }
+
+    @EventSourcingHandler
+    public void on (BookRollbackStatusEvent event){
+        this.id = event.getBookId();
+        this.isReady = event.getIsReady();
+    }
+
+    @EventSourcingHandler
+    public void on(BookUpdateStatusEvent event){
+        this.id = event.getBookId();
+        this.isReady = event.getIsReady();
+    }
+
     @EventSourcingHandler
     public void on(BookCreatedEvent event) {
         this.id = event.getId();
@@ -60,6 +90,7 @@ public class BookAggregate {
         this.author = event.getAuthor();
         this.isReady = event.getIsReady();
     }
+
 
     @EventSourcingHandler
     public void on(BookDeletedEvent event) {
