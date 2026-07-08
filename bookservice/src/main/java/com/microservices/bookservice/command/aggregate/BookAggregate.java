@@ -1,7 +1,6 @@
 package com.microservices.bookservice.command.aggregate;
 
 import org.axonframework.commandhandling.CommandHandler;
-import org.axonframework.eventhandling.EventHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.modelling.command.AggregateIdentifier;
 import org.axonframework.modelling.command.AggregateLifecycle;
@@ -15,13 +14,12 @@ import com.microservices.bookservice.command.event.BookCreatedEvent;
 import com.microservices.bookservice.command.event.BookDeletedEvent;
 import com.microservices.bookservice.command.event.BookUpdatedEvent;
 import com.microservices.bookservice.mapper.BookMapper;
-import com.microservices.commonservice.command.RollbackStatusBookCommand;
-import com.microservices.commonservice.command.UpdateStatusBookCommand;
-import com.microservices.commonservice.event.BookRollbackStatusEvent;
-import com.microservices.commonservice.event.BookUpdateStatusEvent;
+import com.microservices.commonservice.command.ReleaseBookCommand;
+import com.microservices.commonservice.command.ReserveBookCommand;
+import com.microservices.commonservice.event.BookReleasedEvent;
+import com.microservices.commonservice.event.BookReservedEvent;
 
 import org.mapstruct.factory.Mappers;
-import org.springframework.beans.BeanUtils;
 
 import lombok.NoArgsConstructor;
 
@@ -48,29 +46,37 @@ public class BookAggregate {
 
     @CommandHandler
     public void handle(DeleteBookCommand command) {
-        // Implement delete logic here, e.g., apply a BookDeletedEvent
+        if (Boolean.FALSE.equals(this.isReady)) {
+            throw new IllegalStateException("Cannot delete a reserved book");
+        }
         BookDeletedEvent bookDeletedEvent = new BookDeletedEvent(command.getId());
         AggregateLifecycle.apply(bookDeletedEvent);
     }
 
     @CommandHandler
-    public void handler(UpdateStatusBookCommand command){
-        AggregateLifecycle.apply(bookMapper.toBookUpdateStatusEvent(command));
+    public void handle(ReserveBookCommand command) {
+        if (Boolean.FALSE.equals(this.isReady)) {
+            throw new IllegalStateException("Book is not ready for borrowing");
+        }
+        AggregateLifecycle.apply(bookMapper.toBookReservedEvent(command));
     }
 
     @CommandHandler
-    public void handler(RollbackStatusBookCommand command){
-        AggregateLifecycle.apply(bookMapper.toBookRollbackStatusEvent(command));
+    public void handle(ReleaseBookCommand command) {
+        if (Boolean.TRUE.equals(this.isReady)) {
+            throw new IllegalStateException("Book is already available");
+        }
+        AggregateLifecycle.apply(bookMapper.toBookReleasedEvent(command));
     }
 
     @EventSourcingHandler
-    public void on (BookRollbackStatusEvent event){
+    public void on(BookReleasedEvent event) {
         this.id = event.getBookId();
         this.isReady = event.getIsReady();
     }
 
     @EventSourcingHandler
-    public void on(BookUpdateStatusEvent event){
+    public void on(BookReservedEvent event) {
         this.id = event.getBookId();
         this.isReady = event.getIsReady();
     }

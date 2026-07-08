@@ -4,12 +4,16 @@ import java.util.Date;
 import java.util.UUID;
 
 import org.axonframework.commandhandling.gateway.CommandGateway;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.microservices.borrowingservice.command.command.CreateBorrowingCommand;
+import com.microservices.borrowingservice.command.command.ReturnBorrowingCommand;
+import com.microservices.borrowingservice.command.data.BorrowingStatus;
 import com.microservices.borrowingservice.command.model.BorrowingRequestModel;
 
 import jakarta.validation.Valid;
@@ -29,7 +33,14 @@ public class BorrowingCommandController {
                 UUID.randomUUID().toString(),
                 model.getBookId(),
                 model.getEmployeeId(),
-                new Date());
+                new Date(),
+                BorrowingStatus.PENDING);
+        return commandGateway.sendAndWait(command);
+    }
+
+    @PutMapping("/{borrowingId}/return")
+    public String returnBorrowing(@PathVariable String borrowingId) {
+        ReturnBorrowingCommand command = new ReturnBorrowingCommand(borrowingId, new Date());
         return commandGateway.sendAndWait(command);
     }
 }

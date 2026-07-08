@@ -1,6 +1,8 @@
 package com.microservices.borrowingservice.command.data;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -22,4 +24,7 @@ public class Borrowing {
     private String employeeId;
     private Date borrowingDate;
     private Date returnDate;
+
+    @Enumerated(EnumType.STRING)
+    private BorrowingStatus status;
 }

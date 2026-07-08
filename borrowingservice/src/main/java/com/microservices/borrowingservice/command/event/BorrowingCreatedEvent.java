@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import com.microservices.borrowingservice.command.data.BorrowingStatus;
+
 import java.util.Date;
 
 @AllArgsConstructor
@@ -16,4 +18,5 @@ public class BorrowingCreatedEvent {
     private String bookId;
     private String employeeId;
     private Date borrowingDate;
+    private BorrowingStatus status;
 }

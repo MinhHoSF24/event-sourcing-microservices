@@ -7,6 +7,8 @@ import lombok.Setter;
 
 import org.axonframework.modelling.command.TargetAggregateIdentifier;
 
+import com.microservices.borrowingservice.command.data.BorrowingStatus;
+
 import java.util.Date;
 
 @AllArgsConstructor
@@ -20,4 +22,5 @@ public class CreateBorrowingCommand {
     private String bookId;
     private String employeeId;
     private Date borrowingDate;
+    private BorrowingStatus status;
 }

@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 import com.microservices.bookservice.command.data.Book;
 import com.microservices.bookservice.command.data.BookRepository;
 import com.microservices.bookservice.mapper.BookMapper;
-import com.microservices.commonservice.event.BookRollbackStatusEvent;
-import com.microservices.commonservice.event.BookUpdateStatusEvent;
+import com.microservices.commonservice.event.BookReleasedEvent;
+import com.microservices.commonservice.event.BookReservedEvent;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -26,6 +26,7 @@ public class BookEventHandle {
 
     @EventHandler
     public void on(BookCreatedEvent event) {
+        log.info("event=BookCreatedEvent bookId={} isReady={}", event.getId(), event.getIsReady());
         bookRepository.save(bookMapper.toBook(event));
     }
 
@@ -35,14 +36,17 @@ public class BookEventHandle {
         Book book = oldBook.orElseThrow(() -> new Exception("Book not found"));
         bookMapper.updateBookFromEvent(event, book);
         bookRepository.save(book);
+        log.info("event=BookUpdatedEvent bookId={} isReady={}", event.getId(), event.getIsReady());
     }
 
-     @EventHandler
-    public void on(BookUpdateStatusEvent event){
+    @EventHandler
+    public void on(BookReservedEvent event) {
         Optional<Book> oldBook = bookRepository.findById(event.getBookId());
         Book book = oldBook.orElseThrow(() -> new RuntimeException("Book not found"));
         bookMapper.updateStatusBookFromEvent(event, book);
         bookRepository.save(book);
+        log.info("event=BookReservedEvent bookId={} borrowingId={} employeeId={} isReady={}",
+                event.getBookId(), event.getBorrowingId(), event.getEmployeeId(), event.getIsReady());
     }
 
     @EventHandler
@@ -50,16 +54,19 @@ public class BookEventHandle {
         try {
             bookRepository.findById(event.getId()).orElseThrow(() -> new Exception("Book not found"));
             bookRepository.deleteById(event.getId());
-        }catch (Exception ex){
+            log.info("event=BookDeletedEvent bookId={}", event.getId());
+        } catch (Exception ex) {
             log.error(ex.getMessage());
         }
     }
 
     @EventHandler
-    public void on(BookRollbackStatusEvent event){
+    public void on(BookReleasedEvent event) {
         Optional<Book> oldBook = bookRepository.findById(event.getBookId());
         Book book = oldBook.orElseThrow(() -> new RuntimeException("Book not found"));
         bookMapper.rollBackStatusBookFromEvent(event, book);
         bookRepository.save(book);
+        log.info("event=BookReleasedEvent bookId={} borrowingId={} employeeId={} isReady={}",
+                event.getBookId(), event.getBorrowingId(), event.getEmployeeId(), event.getIsReady());
     }
 }

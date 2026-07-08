@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class BookUpdateStatusEvent {
+public class BookReservedEvent {
     private String bookId;
     private Boolean isReady;
     private String employeeId;

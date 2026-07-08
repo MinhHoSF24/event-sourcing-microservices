@@ -1,4 +1,4 @@
-package com.microservices.commonservice.command;
+package com.microservices.borrowingservice.command.command;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,10 +8,8 @@ import org.axonframework.modelling.command.TargetAggregateIdentifier;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class RollbackStatusBookCommand {
+public class CompensateBorrowingCommand {
     @TargetAggregateIdentifier
-    private String bookId;
-    private Boolean isReady;
-    private String employeeId;
-    private String borrowingId;
+    private String id;
+    private String reason;
 }

@@ -1,5 +1,22 @@
 package com.microservices.borrowingservice.command.saga;
 
+import com.microservices.borrowingservice.command.command.ApproveBorrowingCommand;
+import com.microservices.borrowingservice.command.command.CompensateBorrowingCommand;
+import com.microservices.borrowingservice.command.command.MarkBookReservedForBorrowingCommand;
+import com.microservices.borrowingservice.command.command.RejectBorrowingCommand;
+import com.microservices.borrowingservice.command.event.BorrowingApprovedEvent;
+import com.microservices.borrowingservice.command.event.BorrowingCompensatedEvent;
+import com.microservices.borrowingservice.command.event.BorrowingCreatedEvent;
+import com.microservices.borrowingservice.command.event.BorrowingRejectedEvent;
+import com.microservices.commonservice.command.ReleaseBookCommand;
+import com.microservices.commonservice.command.ReserveBookCommand;
+import com.microservices.commonservice.event.BookReleasedEvent;
+import com.microservices.commonservice.event.BookReservedEvent;
+import com.microservices.commonservice.model.BookResponseCommonModel;
+import com.microservices.commonservice.model.EmployeeResponseCommonModel;
+import com.microservices.commonservice.queries.GetBookDetailQuery;
+import com.microservices.commonservice.queries.GetDetailEmployeeQuery;
+import lombok.extern.slf4j.Slf4j;
 import org.axonframework.commandhandling.gateway.CommandGateway;
 import org.axonframework.messaging.responsetypes.ResponseTypes;
 import org.axonframework.modelling.saga.EndSaga;
@@ -8,102 +25,107 @@ import org.axonframework.modelling.saga.SagaLifecycle;
 import org.axonframework.modelling.saga.StartSaga;
 import org.axonframework.queryhandling.QueryGateway;
 import org.axonframework.spring.stereotype.Saga;
-
-import com.microservices.borrowingservice.command.command.DeleteBorrowingCommand;
-import com.microservices.borrowingservice.command.event.BorrowingCreatedEvent;
-import com.microservices.borrowingservice.command.event.BorrowingDeletedEvent;
-import com.microservices.commonservice.command.RollbackStatusBookCommand;
-import com.microservices.commonservice.command.UpdateStatusBookCommand;
-import com.microservices.commonservice.event.BookRollbackStatusEvent;
-import com.microservices.commonservice.event.BookUpdateStatusEvent;
-import com.microservices.commonservice.model.BookResponseCommonModel;
-import com.microservices.commonservice.model.EmployeeResponseCommonModel;
-import com.microservices.commonservice.queries.GetBookDetailQuery;
-import com.microservices.commonservice.queries.GetDetailEmployeeQuery;
-
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Slf4j
 @Saga
 public class BorrowingSaga {
-    // Axon's GenericSagaFactory instantiates the saga via a no-arg constructor,
-    // then SpringResourceInjector wires these fields (it cannot do constructor
-    // injection). Keep them as @Autowired fields and do NOT add a parameterized
-    // constructor, or Axon throws SagaCreationException at @StartSaga.
-    private transient final CommandGateway commandGateway;
-    private transient final QueryGateway queryGateway;
+    @Autowired
+    private transient CommandGateway commandGateway;
 
-    BorrowingSaga(CommandGateway commandGateway, QueryGateway queryGateway) {
-        this.commandGateway = commandGateway;
-        this.queryGateway = queryGateway;
+    @Autowired
+    private transient QueryGateway queryGateway;
+
+    public BorrowingSaga() {
     }
 
     @StartSaga
     @SagaEventHandler(associationProperty = "id")
     void handle(BorrowingCreatedEvent event) {
-        log.info("BorrowingCreatedEvent in saga for BookId: " + event.getBookId() + " : EmployeeId: "
-                + event.getEmployeeId());
+        log.info("sagaStep=START event=BorrowingCreatedEvent borrowingId={} bookId={} employeeId={} status={}",
+                event.getId(), event.getBookId(), event.getEmployeeId(), event.getStatus());
         try {
-            GetBookDetailQuery getBookDetailQuery = new GetBookDetailQuery(event.getBookId());
-            BookResponseCommonModel bookResponseCommonModel = queryGateway.query(getBookDetailQuery,
+            BookResponseCommonModel book = queryGateway.query(
+                    new GetBookDetailQuery(event.getBookId()),
                     ResponseTypes.instanceOf(BookResponseCommonModel.class)).join();
-            if (!bookResponseCommonModel.getIsReady()) {
-                throw new Exception("Book is not ready for borrowing");
-            } else {
-                SagaLifecycle.associateWith("bookId", event.getBookId());
-                UpdateStatusBookCommand command = new UpdateStatusBookCommand(event.getBookId(), false,
-                        event.getEmployeeId(), event.getId());
-                commandGateway.sendAndWait(command);
+
+            if (!book.getIsReady()) {
+                rejectBorrowing(event.getId(), "Book is not ready for borrowing");
+                return;
             }
+
+            SagaLifecycle.associateWith("bookId", event.getBookId());
+            commandGateway.sendAndWait(new ReserveBookCommand(
+                    event.getBookId(), false, event.getEmployeeId(), event.getId()));
         } catch (Exception ex) {
-            rollbackBorrowingRecord(event.getId());
-            log.error(ex.getMessage());
+            rejectBorrowing(event.getId(), ex.getMessage());
+            log.error("sagaStep=REJECT borrowingId={} reason={}", event.getId(), ex.getMessage());
         }
     }
 
     @SagaEventHandler(associationProperty = "bookId")
-    void handler(BookUpdateStatusEvent event) {
-        log.info("BookUpdateStatusEvent in Saga for BookId : " + event.getBookId());
+    void handle(BookReservedEvent event) {
+        log.info("sagaStep=BOOK_RESERVED event=BookReservedEvent borrowingId={} bookId={} employeeId={}",
+                event.getBorrowingId(), event.getBookId(), event.getEmployeeId());
         try {
-            GetDetailEmployeeQuery query = new GetDetailEmployeeQuery(event.getEmployeeId());
-            EmployeeResponseCommonModel employeeModel = queryGateway
-                    .query(query, ResponseTypes.instanceOf(EmployeeResponseCommonModel.class)).join();
-            if (employeeModel.getIsDisciplined()) {
-                throw new Exception("Employee is disciplined and cannot borrow books");
-            } else {
-                log.info("Book borrowed successfully for BookId : " + event.getBookId() + " and EmployeeId : " + event.getEmployeeId());
-                SagaLifecycle.end();
+            commandGateway.sendAndWait(new MarkBookReservedForBorrowingCommand(event.getBorrowingId()));
+
+            EmployeeResponseCommonModel employee = queryGateway.query(
+                    new GetDetailEmployeeQuery(event.getEmployeeId()),
+                    ResponseTypes.instanceOf(EmployeeResponseCommonModel.class)).join();
+
+            if (employee.getIsDisciplined()) {
+                releaseBook(event.getBookId(), event.getEmployeeId(), event.getBorrowingId(),
+                        "Employee is disciplined and cannot borrow books");
+                return;
             }
 
+            commandGateway.sendAndWait(new ApproveBorrowingCommand(event.getBorrowingId()));
+            log.info("sagaStep=APPROVE borrowingId={} bookId={} employeeId={}",
+                    event.getBorrowingId(), event.getBookId(), event.getEmployeeId());
         } catch (Exception ex) {
-            rollBackBookStatus(event.getBookId(), event.getEmployeeId(), event.getBorrowingId());
-            log.error(ex.getMessage());
+            releaseBook(event.getBookId(), event.getEmployeeId(), event.getBorrowingId(), ex.getMessage());
+            log.error("sagaStep=COMPENSATE borrowingId={} reason={}", event.getBorrowingId(), ex.getMessage());
         }
-
-    }
-
-    private void rollbackBorrowingRecord(String id) {
-        DeleteBorrowingCommand command = new DeleteBorrowingCommand(id);
-        commandGateway.sendAndWait(command);
-    }
-
-    private void rollBackBookStatus(String bookId, String employeeId, String borrowingId) {
-        SagaLifecycle.associateWith("bookId", bookId);
-        RollbackStatusBookCommand command = new RollbackStatusBookCommand(bookId, true, employeeId, borrowingId);
-        commandGateway.sendAndWait(command);
     }
 
     @SagaEventHandler(associationProperty = "bookId")
-    void handle(BookRollbackStatusEvent event) {
-        log.info("BookRollbackStatusEvent in Saga for book Id : {} " + event.getBookId());
-        rollbackBorrowingRecord(event.getBorrowingId());
+    void handle(BookReleasedEvent event) {
+        log.info("sagaStep=BOOK_RELEASED event=BookReleasedEvent borrowingId={} bookId={} employeeId={}",
+                event.getBorrowingId(), event.getBookId(), event.getEmployeeId());
+        commandGateway.sendAndWait(new CompensateBorrowingCommand(
+                event.getBorrowingId(),
+                "Book released because borrowing failed validation"));
     }
 
     @SagaEventHandler(associationProperty = "id")
     @EndSaga
-    void handle(BorrowingDeletedEvent event) {
-        log.info("BorrowDeletedEvent in Saga for Borrowing Id : {} " +
-                event.getId());
+    void handle(BorrowingApprovedEvent event) {
+        log.info("sagaStep=END event=BorrowingApprovedEvent borrowingId={}", event.getId());
+    }
+
+    @SagaEventHandler(associationProperty = "id")
+    @EndSaga
+    void handle(BorrowingRejectedEvent event) {
+        log.info("sagaStep=END event=BorrowingRejectedEvent borrowingId={} reason={}",
+                event.getId(), event.getReason());
+    }
+
+    @SagaEventHandler(associationProperty = "id")
+    @EndSaga
+    void handle(BorrowingCompensatedEvent event) {
+        log.info("sagaStep=END event=BorrowingCompensatedEvent borrowingId={} reason={}",
+                event.getId(), event.getReason());
+    }
+
+    private void rejectBorrowing(String borrowingId, String reason) {
+        commandGateway.sendAndWait(new RejectBorrowingCommand(borrowingId, reason));
+    }
+
+    private void releaseBook(String bookId, String employeeId, String borrowingId, String reason) {
+        log.info("sagaStep=RELEASE_BOOK borrowingId={} bookId={} employeeId={} reason={}",
+                borrowingId, bookId, employeeId, reason);
+        SagaLifecycle.associateWith("bookId", bookId);
+        commandGateway.sendAndWait(new ReleaseBookCommand(bookId, true, employeeId, borrowingId));
     }
 }
