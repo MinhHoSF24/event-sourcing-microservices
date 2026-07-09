@@ -2,7 +2,9 @@ package com.microservices.bookservice.command.aggregate;
 
 import com.microservices.bookservice.command.command.CreateBookCommand;
 import com.microservices.bookservice.command.command.DeleteBookCommand;
+import com.microservices.bookservice.command.command.UpdateBookCommand;
 import com.microservices.bookservice.command.event.BookCreatedEvent;
+import com.microservices.bookservice.command.event.BookUpdatedEvent;
 import com.microservices.commonservice.command.ReleaseBookCommand;
 import com.microservices.commonservice.command.ReserveBookCommand;
 import com.microservices.commonservice.event.BookReleasedEvent;
@@ -56,5 +58,12 @@ class BookAggregateTest {
                         new BookReservedEvent("book-1", false, "employee-1", "borrowing-1"))
                 .when(new DeleteBookCommand("book-1"))
                 .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    void catalogUpdateCannotChangeAvailability() {
+        fixture.given(new BookCreatedEvent("book-1", "Clean Architecture", "Robert Martin", true))
+                .when(new UpdateBookCommand("book-1", "Clean Architecture 2", "Robert C. Martin", false))
+                .expectEvents(new BookUpdatedEvent("book-1", "Clean Architecture 2", "Robert C. Martin", true));
     }
 }

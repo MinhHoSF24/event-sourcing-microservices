@@ -1,5 +1,8 @@
 package com.microservices.apigateway.Filter;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
@@ -19,7 +22,7 @@ public class KeyAuthFilter extends AbstractGatewayFilterFactory<KeyAuthFilter.Co
         super(Config.class);
     }
 
-    @Value("${apiKey}")
+    @Value("${api.gateway.api-key}")
     private String apiKey;
     
     @Override
@@ -29,10 +32,14 @@ public class KeyAuthFilter extends AbstractGatewayFilterFactory<KeyAuthFilter.Co
                 return handleException(exchange,"Missing authorization information",HttpStatus.UNAUTHORIZED);
             }
             String key = exchange.getRequest().getHeaders().get("apiKey").get(0);
-            if(!key.equals(apiKey)){
+            if(!MessageDigest.isEqual(
+                    key.getBytes(StandardCharsets.UTF_8),
+                    apiKey.getBytes(StandardCharsets.UTF_8))){
                 return handleException(exchange,"Invalid Api Key",HttpStatus.FORBIDDEN);
             }
-            ServerHttpRequest request = exchange.getRequest();
+            ServerHttpRequest request = exchange.getRequest().mutate()
+                    .headers(headers -> headers.remove("apiKey"))
+                    .build();
             return chain.filter(exchange.mutate().request(request).build());
         };
     }
@@ -52,7 +59,6 @@ public class KeyAuthFilter extends AbstractGatewayFilterFactory<KeyAuthFilter.Co
 
 
     public static class Config {
-        // Add any configuration properties if needed
     }
     
 }

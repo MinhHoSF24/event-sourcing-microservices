@@ -9,25 +9,23 @@ import org.axonframework.spring.stereotype.Aggregate;
 import com.microservices.bookservice.command.command.CreateBookCommand;
 import com.microservices.bookservice.command.command.DeleteBookCommand;
 import com.microservices.bookservice.command.command.UpdateBookCommand;
-import com.microservices.bookservice.command.data.Book;
 import com.microservices.bookservice.command.event.BookCreatedEvent;
 import com.microservices.bookservice.command.event.BookDeletedEvent;
 import com.microservices.bookservice.command.event.BookUpdatedEvent;
-import com.microservices.bookservice.mapper.BookMapper;
+import com.microservices.bookservice.domain.model.AuthorName;
+import com.microservices.bookservice.domain.model.BookId;
+import com.microservices.bookservice.domain.model.BookTitle;
+import com.microservices.bookservice.domain.policy.BookAvailabilityPolicy;
 import com.microservices.commonservice.command.ReleaseBookCommand;
 import com.microservices.commonservice.command.ReserveBookCommand;
 import com.microservices.commonservice.event.BookReleasedEvent;
 import com.microservices.commonservice.event.BookReservedEvent;
-
-import org.mapstruct.factory.Mappers;
 
 import lombok.NoArgsConstructor;
 
 @Aggregate
 @NoArgsConstructor
 public class BookAggregate {
-    private static final BookMapper bookMapper = Mappers.getMapper(BookMapper.class);
-
     @AggregateIdentifier
     private String id;
     private String name;
@@ -36,37 +34,27 @@ public class BookAggregate {
 
     @CommandHandler
     public BookAggregate(CreateBookCommand command) {
-        AggregateLifecycle.apply(bookMapper.toBookCreatedEvent(command));
+        addToCatalog(command);
     }
 
     @CommandHandler
     public void handle(UpdateBookCommand command) {
-        AggregateLifecycle.apply(bookMapper.toBookUpdatedEvent(command));
+        updateCatalogDetails(command);
     }
 
     @CommandHandler
     public void handle(DeleteBookCommand command) {
-        if (Boolean.FALSE.equals(this.isReady)) {
-            throw new IllegalStateException("Cannot delete a reserved book");
-        }
-        BookDeletedEvent bookDeletedEvent = new BookDeletedEvent(command.getId());
-        AggregateLifecycle.apply(bookDeletedEvent);
+        removeFromCatalog(command.getId());
     }
 
     @CommandHandler
     public void handle(ReserveBookCommand command) {
-        if (Boolean.FALSE.equals(this.isReady)) {
-            throw new IllegalStateException("Book is not ready for borrowing");
-        }
-        AggregateLifecycle.apply(bookMapper.toBookReservedEvent(command));
+        reserveForBorrowing(command);
     }
 
     @CommandHandler
     public void handle(ReleaseBookCommand command) {
-        if (Boolean.TRUE.equals(this.isReady)) {
-            throw new IllegalStateException("Book is already available");
-        }
-        AggregateLifecycle.apply(bookMapper.toBookReleasedEvent(command));
+        releaseAfterFailedBorrowing(command);
     }
 
     @EventSourcingHandler
@@ -101,5 +89,50 @@ public class BookAggregate {
     @EventSourcingHandler
     public void on(BookDeletedEvent event) {
         this.id = event.getId();
+    }
+
+    private void addToCatalog(CreateBookCommand command) {
+        BookId bookId = BookId.of(command.getId());
+        BookTitle title = BookTitle.of(command.getName());
+        AuthorName author = AuthorName.of(command.getAuthor());
+        BookAvailabilityPolicy.ensureAvailabilityKnown(command.getIsReady());
+
+        AggregateLifecycle.apply(new BookCreatedEvent(
+                bookId.value(),
+                title.value(),
+                author.value(),
+                command.getIsReady()));
+    }
+
+    private void updateCatalogDetails(UpdateBookCommand command) {
+        BookId bookId = BookId.of(command.getId());
+        BookTitle title = BookTitle.of(command.getName());
+        AuthorName author = AuthorName.of(command.getAuthor());
+
+        // Availability changes are owned by reserve/release commands, not catalog editing.
+        AggregateLifecycle.apply(new BookUpdatedEvent(bookId.value(), title.value(), author.value(), this.isReady));
+    }
+
+    private void removeFromCatalog(String bookId) {
+        BookAvailabilityPolicy.ensureCanDelete(this.isReady);
+        AggregateLifecycle.apply(new BookDeletedEvent(BookId.of(bookId).value()));
+    }
+
+    private void reserveForBorrowing(ReserveBookCommand command) {
+        BookAvailabilityPolicy.ensureCanReserve(this.isReady);
+        AggregateLifecycle.apply(new BookReservedEvent(
+                BookId.of(command.getBookId()).value(),
+                false,
+                command.getEmployeeId(),
+                command.getBorrowingId()));
+    }
+
+    private void releaseAfterFailedBorrowing(ReleaseBookCommand command) {
+        BookAvailabilityPolicy.ensureCanRelease(this.isReady);
+        AggregateLifecycle.apply(new BookReleasedEvent(
+                BookId.of(command.getBookId()).value(),
+                true,
+                command.getEmployeeId(),
+                command.getBorrowingId()));
     }
 }

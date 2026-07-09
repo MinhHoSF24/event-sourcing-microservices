@@ -1,6 +1,6 @@
 package com.microservices.borrowingservice.query.model;
 
-import com.microservices.borrowingservice.command.data.BorrowingStatus;
+import com.microservices.borrowingservice.domain.model.BorrowingStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

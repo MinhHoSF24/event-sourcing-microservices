@@ -4,8 +4,8 @@ import com.microservices.borrowingservice.command.command.ApproveBorrowingComman
 import com.microservices.borrowingservice.command.command.CompensateBorrowingCommand;
 import com.microservices.borrowingservice.command.command.MarkBookReservedForBorrowingCommand;
 import com.microservices.borrowingservice.command.command.RejectBorrowingCommand;
-import com.microservices.borrowingservice.command.data.BorrowingStatus;
 import com.microservices.borrowingservice.command.event.BorrowingCreatedEvent;
+import com.microservices.borrowingservice.domain.model.BorrowingStatus;
 import com.microservices.commonservice.command.ReleaseBookCommand;
 import com.microservices.commonservice.command.ReserveBookCommand;
 import com.microservices.commonservice.event.BookReleasedEvent;

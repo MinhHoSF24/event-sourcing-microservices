@@ -13,7 +13,6 @@ import com.microservices.borrowingservice.command.command.CompensateBorrowingCom
 import com.microservices.borrowingservice.command.command.MarkBookReservedForBorrowingCommand;
 import com.microservices.borrowingservice.command.command.RejectBorrowingCommand;
 import com.microservices.borrowingservice.command.command.ReturnBorrowingCommand;
-import com.microservices.borrowingservice.command.data.BorrowingStatus;
 import com.microservices.borrowingservice.command.event.BorrowingApprovedEvent;
 import com.microservices.borrowingservice.command.event.BorrowingBookReservedEvent;
 import com.microservices.borrowingservice.command.event.BorrowingCompensatedEvent;
@@ -21,7 +20,12 @@ import com.microservices.borrowingservice.command.event.BorrowingCreatedEvent;
 import com.microservices.borrowingservice.command.event.BorrowingDeletedEvent;
 import com.microservices.borrowingservice.command.event.BorrowingRejectedEvent;
 import com.microservices.borrowingservice.command.event.BorrowingReturnedEvent;
-import com.microservices.borrowingservice.mapper.BorrowingMapper;
+import com.microservices.borrowingservice.domain.model.BookId;
+import com.microservices.borrowingservice.domain.model.BorrowingId;
+import com.microservices.borrowingservice.domain.model.BorrowingPeriod;
+import com.microservices.borrowingservice.domain.model.BorrowingStatus;
+import com.microservices.borrowingservice.domain.model.EmployeeId;
+import com.microservices.borrowingservice.domain.policy.BorrowingLifecyclePolicy;
 
 import lombok.NoArgsConstructor;
 
@@ -39,44 +43,40 @@ public class BorrowingAggregate {
     private BorrowingStatus status;
 
     @CommandHandler
-    public BorrowingAggregate(CreateBorrowingCommand command, BorrowingMapper borrowingMapper) {
-        AggregateLifecycle.apply(borrowingMapper.toBorrowingCreatedEvent(command));
+    public BorrowingAggregate(CreateBorrowingCommand command) {
+        requestBorrowing(command);
     }
 
     @CommandHandler
     public void handle(DeleteBorrowingCommand command) {
+        BorrowingId.of(command.getId());
         BorrowingDeletedEvent event = new BorrowingDeletedEvent(command.getId());
         AggregateLifecycle.apply(event);
     }
 
     @CommandHandler
     public void handle(MarkBookReservedForBorrowingCommand command) {
-        ensureStatus(BorrowingStatus.PENDING, "Only pending borrowing can reserve a book");
-        AggregateLifecycle.apply(new BorrowingBookReservedEvent(command.getId()));
+        markBookReserved(command.getId());
     }
 
     @CommandHandler
     public void handle(ApproveBorrowingCommand command) {
-        ensureStatus(BorrowingStatus.BOOK_RESERVED, "Only reserved borrowing can be approved");
-        AggregateLifecycle.apply(new BorrowingApprovedEvent(command.getId()));
+        approve(command.getId());
     }
 
     @CommandHandler
     public void handle(RejectBorrowingCommand command) {
-        ensureStatus(BorrowingStatus.PENDING, "Only pending borrowing can be rejected");
-        AggregateLifecycle.apply(new BorrowingRejectedEvent(command.getId(), command.getReason()));
+        reject(command.getId(), command.getReason());
     }
 
     @CommandHandler
     public void handle(CompensateBorrowingCommand command) {
-        ensureStatus(BorrowingStatus.BOOK_RESERVED, "Only reserved borrowing can be compensated");
-        AggregateLifecycle.apply(new BorrowingCompensatedEvent(command.getId(), command.getReason()));
+        compensate(command.getId(), command.getReason());
     }
 
     @CommandHandler
     public void handle(ReturnBorrowingCommand command) {
-        ensureStatus(BorrowingStatus.APPROVED, "Only approved borrowing can be returned");
-        AggregateLifecycle.apply(new BorrowingReturnedEvent(command.getId(), command.getReturnDate()));
+        returnToLibrary(command.getId(), command.getReturnDate());
     }
 
     @EventSourcingHandler
@@ -124,9 +124,49 @@ public class BorrowingAggregate {
         this.status = BorrowingStatus.RETURNED;
     }
 
-    private void ensureStatus(BorrowingStatus expected, String message) {
-        if (this.status != expected) {
-            throw new IllegalStateException(message);
-        }
+    private void requestBorrowing(CreateBorrowingCommand command) {
+        BorrowingId borrowingId = BorrowingId.of(command.getId());
+        BookId bookId = BookId.of(command.getBookId());
+        EmployeeId employeeId = EmployeeId.of(command.getEmployeeId());
+        BorrowingPeriod period = BorrowingPeriod.starting(command.getBorrowingDate());
+        BorrowingLifecyclePolicy.ensureNewBorrowingStartsPending(command.getStatus());
+
+        AggregateLifecycle.apply(new BorrowingCreatedEvent(
+                borrowingId.value(),
+                bookId.value(),
+                employeeId.value(),
+                period.borrowingDate(),
+                BorrowingStatus.PENDING));
+    }
+
+    private void markBookReserved(String borrowingId) {
+        BorrowingLifecyclePolicy.ensureStatus(
+                this.status, BorrowingStatus.PENDING, "Only pending borrowing can reserve a book");
+        AggregateLifecycle.apply(new BorrowingBookReservedEvent(BorrowingId.of(borrowingId).value()));
+    }
+
+    private void approve(String borrowingId) {
+        BorrowingLifecyclePolicy.ensureStatus(
+                this.status, BorrowingStatus.BOOK_RESERVED, "Only reserved borrowing can be approved");
+        AggregateLifecycle.apply(new BorrowingApprovedEvent(BorrowingId.of(borrowingId).value()));
+    }
+
+    private void reject(String borrowingId, String reason) {
+        BorrowingLifecyclePolicy.ensureStatus(
+                this.status, BorrowingStatus.PENDING, "Only pending borrowing can be rejected");
+        AggregateLifecycle.apply(new BorrowingRejectedEvent(BorrowingId.of(borrowingId).value(), reason));
+    }
+
+    private void compensate(String borrowingId, String reason) {
+        BorrowingLifecyclePolicy.ensureStatus(
+                this.status, BorrowingStatus.BOOK_RESERVED, "Only reserved borrowing can be compensated");
+        AggregateLifecycle.apply(new BorrowingCompensatedEvent(BorrowingId.of(borrowingId).value(), reason));
+    }
+
+    private void returnToLibrary(String borrowingId, Date returnDate) {
+        BorrowingLifecyclePolicy.ensureStatus(
+                this.status, BorrowingStatus.APPROVED, "Only approved borrowing can be returned");
+        BorrowingPeriod period = BorrowingPeriod.of(this.borrowingDate, returnDate);
+        AggregateLifecycle.apply(new BorrowingReturnedEvent(BorrowingId.of(borrowingId).value(), period.returnDate()));
     }
 }

@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import com.microservices.borrowingservice.command.data.BorrowingStatus;
+import com.microservices.borrowingservice.domain.model.BorrowingStatus;
 
 import java.util.Date;
 

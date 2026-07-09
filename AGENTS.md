@@ -1,1 +1,7 @@
 - 2026-07-07 BorrowingSaga: Added status-based CQRS compensation flow - Improves saga learning
+- 2026-07-08 ApiGateway: Added role-based route security and rate limits - Reduces auth bypasses
+- 2026-07-09 DomainModel: Added DDD value objects and read models - Clarifies business boundaries
+- 2026-07-09 UserService: Split commands queries and domain policies - Clarifies CQRS boundaries
+- 2026-07-09 UserService: Reorganized controllers models and read models - Matches service CQRS
+- 2026-07-09 UserService: Added Axon Spring Boot dependencies - Enables Axon CQRS
+- 2026-07-09 UserService: Converted writes to Axon event sourcing - Aligns CQRS model

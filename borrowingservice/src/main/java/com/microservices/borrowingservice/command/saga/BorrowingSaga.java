@@ -8,6 +8,7 @@ import com.microservices.borrowingservice.command.event.BorrowingApprovedEvent;
 import com.microservices.borrowingservice.command.event.BorrowingCompensatedEvent;
 import com.microservices.borrowingservice.command.event.BorrowingCreatedEvent;
 import com.microservices.borrowingservice.command.event.BorrowingRejectedEvent;
+import com.microservices.borrowingservice.domain.policy.BorrowingEligibilityPolicy;
 import com.microservices.commonservice.command.ReleaseBookCommand;
 import com.microservices.commonservice.command.ReserveBookCommand;
 import com.microservices.commonservice.event.BookReleasedEvent;
@@ -49,8 +50,9 @@ public class BorrowingSaga {
                     new GetBookDetailQuery(event.getBookId()),
                     ResponseTypes.instanceOf(BookResponseCommonModel.class)).join();
 
-            if (!book.getIsReady()) {
-                rejectBorrowing(event.getId(), "Book is not ready for borrowing");
+            var bookFailure = BorrowingEligibilityPolicy.reasonBookCannotBeBorrowed(book.getIsReady());
+            if (bookFailure.isPresent()) {
+                rejectBorrowing(event.getId(), bookFailure.get());
                 return;
             }
 
@@ -74,9 +76,9 @@ public class BorrowingSaga {
                     new GetDetailEmployeeQuery(event.getEmployeeId()),
                     ResponseTypes.instanceOf(EmployeeResponseCommonModel.class)).join();
 
-            if (employee.getIsDisciplined()) {
-                releaseBook(event.getBookId(), event.getEmployeeId(), event.getBorrowingId(),
-                        "Employee is disciplined and cannot borrow books");
+            var employeeFailure = BorrowingEligibilityPolicy.reasonEmployeeCannotBorrow(employee.getIsDisciplined());
+            if (employeeFailure.isPresent()) {
+                releaseBook(event.getBookId(), event.getEmployeeId(), event.getBorrowingId(), employeeFailure.get());
                 return;
             }
 

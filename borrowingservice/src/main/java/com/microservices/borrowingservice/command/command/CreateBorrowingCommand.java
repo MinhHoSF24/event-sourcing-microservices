@@ -7,7 +7,7 @@ import lombok.Setter;
 
 import org.axonframework.modelling.command.TargetAggregateIdentifier;
 
-import com.microservices.borrowingservice.command.data.BorrowingStatus;
+import com.microservices.borrowingservice.domain.model.BorrowingStatus;
 
 import java.util.Date;
 

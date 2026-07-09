@@ -1,9 +1,9 @@
 package com.microservices.borrowingservice.command.event;
 
-import com.microservices.borrowingservice.command.data.Borrowing;
-import com.microservices.borrowingservice.command.data.BorrowingRepository;
-import com.microservices.borrowingservice.command.data.BorrowingStatus;
+import com.microservices.borrowingservice.domain.model.BorrowingStatus;
 import com.microservices.borrowingservice.mapper.BorrowingMapper;
+import com.microservices.borrowingservice.query.readmodel.BorrowingReadModel;
+import com.microservices.borrowingservice.query.readmodel.BorrowingReadModelRepository;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
@@ -17,9 +17,9 @@ class BorrowingEventHandleTest {
 
     @Test
     void approvedEventUpdatesBorrowingReadModelStatus() {
-        BorrowingRepository borrowingRepository = mock(BorrowingRepository.class);
+        BorrowingReadModelRepository borrowingRepository = mock(BorrowingReadModelRepository.class);
         BorrowingMapper borrowingMapper = mock(BorrowingMapper.class);
-        Borrowing borrowing = new Borrowing();
+        BorrowingReadModel borrowing = new BorrowingReadModel();
         borrowing.setId("borrowing-1");
         borrowing.setStatus(BorrowingStatus.BOOK_RESERVED);
         when(borrowingRepository.findById("borrowing-1")).thenReturn(Optional.of(borrowing));

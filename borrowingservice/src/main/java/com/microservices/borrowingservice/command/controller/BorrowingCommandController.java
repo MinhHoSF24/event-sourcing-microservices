@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.microservices.borrowingservice.command.command.CreateBorrowingCommand;
 import com.microservices.borrowingservice.command.command.ReturnBorrowingCommand;
-import com.microservices.borrowingservice.command.data.BorrowingStatus;
+import com.microservices.borrowingservice.domain.model.BorrowingStatus;
 import com.microservices.borrowingservice.command.model.BorrowingRequestModel;
 
 import jakarta.validation.Valid;

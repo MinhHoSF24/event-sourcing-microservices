@@ -6,13 +6,13 @@ import com.microservices.borrowingservice.command.command.CreateBorrowingCommand
 import com.microservices.borrowingservice.command.command.MarkBookReservedForBorrowingCommand;
 import com.microservices.borrowingservice.command.command.RejectBorrowingCommand;
 import com.microservices.borrowingservice.command.command.ReturnBorrowingCommand;
-import com.microservices.borrowingservice.command.data.BorrowingStatus;
 import com.microservices.borrowingservice.command.event.BorrowingApprovedEvent;
 import com.microservices.borrowingservice.command.event.BorrowingBookReservedEvent;
 import com.microservices.borrowingservice.command.event.BorrowingCompensatedEvent;
 import com.microservices.borrowingservice.command.event.BorrowingCreatedEvent;
 import com.microservices.borrowingservice.command.event.BorrowingRejectedEvent;
 import com.microservices.borrowingservice.command.event.BorrowingReturnedEvent;
+import com.microservices.borrowingservice.domain.model.BorrowingStatus;
 import com.microservices.borrowingservice.mapper.BorrowingMapper;
 import org.axonframework.test.aggregate.AggregateTestFixture;
 import org.junit.jupiter.api.BeforeEach;
@@ -85,6 +85,16 @@ class BorrowingAggregateTest {
         fixture.given(pendingBorrowingCreated(), new BorrowingRejectedEvent("borrowing-1", "Book is not ready"))
                 .when(new ReturnBorrowingCommand("borrowing-1", RETURN_DATE))
                 .expectException(IllegalStateException.class);
+    }
+
+    @Test
+    void returnDateCannotBeBeforeBorrowingDate() {
+        fixture.given(
+                        pendingBorrowingCreated(),
+                        new BorrowingBookReservedEvent("borrowing-1"),
+                        new BorrowingApprovedEvent("borrowing-1"))
+                .when(new ReturnBorrowingCommand("borrowing-1", new Date(500L)))
+                .expectException(IllegalArgumentException.class);
     }
 
     private BorrowingCreatedEvent pendingBorrowingCreated() {
